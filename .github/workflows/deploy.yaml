@@ -12,11 +12,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Minikube
-        uses: engineerd/setup-minikube@v1
-        with:
-          minikube-version: latest
-          kubectl-version: latest
+      - name: Install kubectl
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y apt-transport-https ca-certificates curl
+          curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+          echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+          sudo apt-get update -y
+          sudo apt-get install -y kubectl
+
+      - name: Install Minikube
+        run: |
+          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+          sudo dpkg -i minikube_latest_amd64.deb
+
+      - name: Start Minikube
+        run: minikube start --driver=docker --wait=all
 
       - name: Build Docker image
         run: |
@@ -24,8 +35,7 @@ jobs:
 
       - name: Load Docker image into Minikube
         run: |
-          minikube docker-env
-          docker save balaji2702/example-app:latest | (eval $(minikube docker-env) && docker load)
+          minikube -p minikube cache add balaji2702/example-app:latest
 
       - name: Apply Kubernetes configuration
         run: kubectl apply -f deployment.yaml
